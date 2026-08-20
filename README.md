@@ -1,6 +1,27 @@
-# Jogo da Velha vs Ollama local
+# Jogo da Velha vs IA
 
-Você joga de **X**, o modelo `qwen-fast:latest` (Ollama local) joga de **O** — e te zoa a cada
+No ar: **https://jogo-da-velha.antonio-code.duckdns.org** (cluster k3s/ArgoCD,
+namespace `ai`, chart em `app-charts/jogo-da-velha`).
+
+Dois provedores, escolhidos por `AI_PROVIDER`:
+
+| | `ollama` (dev local) | `openai` (cluster) |
+|---|---|---|
+| endpoint | `OLLAMA_HOST` `/api/chat` | `OPENAI_BASE_URL` `/chat/completions` |
+| modelo padrão | `qwen-fast:latest` | `cloud/llama-8b` (LiteLLM) |
+| JSON | `format: "json"` + `think:false` | `response_format: json_object` |
+
+**Escolha do modelo no LiteLLM** (homologado com chamada real): `cloud/llama-8b`
+responde em 0,6–2 s com JSON válido. `cloud/gpt-oss-120b` e `cloud/qwen-coder`
+devolvem content **vazio** (`finish_reason=length` — são de raciocínio),
+`cloud/maverick` ignora `response_format` e `cloud/llama-70b` oscila de 4 a 32 s.
+Nenhum desses serve para um jogo interativo.
+
+As chamadas mandam `cache: {"no-cache": true}` **no corpo** (não existe header
+`x-litellm-no-cache`): sem isso o mesmo tabuleiro devolve sempre a mesma piada,
+em ~40 ms de cache hit.
+
+Você joga de **X**, o modelo joga de **O** — e te zoa a cada
 jogada. A zoeira vem no **mesmo JSON** da jogada (`{"move", "zoeira"}`), sem inferência extra: o
 Ollama serializa requisições, então um segundo call dobraria a espera por turno.
 
