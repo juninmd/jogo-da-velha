@@ -1,0 +1,10 @@
+{
+  "name": "jogo-da-velha",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/server.ts",
+    "dev": "bun --watch src/server.ts",
+    "smoke": "bun run scripts/smoke.ts"
+  }
+}

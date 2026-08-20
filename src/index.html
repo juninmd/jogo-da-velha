@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#07070c" />
+<title>Jogo da Velha vs IA</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg:#07070c; --panel:#12121c; --panel-2:#191926; --line:#282838;
+    --fg:#f2f2f7; --mut:#8f8fa6;
+    --x:#38bdf8; --x-glow:#38bdf866;
+    --o:#fb7185; --o-glow:#fb718566;
+    --ok:#4ade80;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body {
+    min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:clamp(.9rem,2.5vh,1.4rem); padding:max(1.2rem,env(safe-area-inset-top)) 1.1rem 1.6rem;
+    background:var(--bg); color:var(--fg); overflow-x:hidden;
+    font:16px/1.5 ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  /* brilhos de fundo */
+  body::before, body::after {
+    content:""; position:fixed; width:60vmax; height:60vmax; border-radius:50%;
+    filter:blur(100px); opacity:.16; pointer-events:none; z-index:-1;
+  }
+  body::before { background:var(--x); top:-25vmax; left:-20vmax; animation:drift 18s ease-in-out infinite alternate; }
+  body::after  { background:var(--o); bottom:-25vmax; right:-20vmax; animation:drift 22s ease-in-out infinite alternate-reverse; }
+  @keyframes drift { to { transform:translate3d(6vmax,4vmax,0) scale(1.15); } }
+
+  header { text-align:center; }
+  h1 { font-size:clamp(1.1rem,4.5vw,1.4rem); font-weight:800; letter-spacing:-.02em; }
+  .model { color:var(--mut); font-size:.75rem; margin-top:.2rem; }
+  .model code { color:var(--o); font-family:ui-monospace,"SF Mono",Consolas,monospace; }
+
+  /* placar */
+  #score { display:flex; gap:.4rem; }
+  .sc { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+        padding:.45rem .9rem; text-align:center; min-width:74px; }
+  .sc b { display:block; font-size:1.15rem; font-variant-numeric:tabular-nums; line-height:1.2; }
+  .sc span { font-size:.62rem; text-transform:uppercase; letter-spacing:.09em; color:var(--mut); }
+  .sc.me b { color:var(--x); } .sc.ia b { color:var(--o); }
+
+  /* balao da IA */
+  #talk { display:flex; align-items:center; gap:.7rem; width:100%; max-width:420px;
+          background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:.7rem .85rem; }
+  #face { flex:none; width:38px; height:38px; border-radius:11px; display:grid; place-items:center; font-size:1.2rem;
+          background:linear-gradient(140deg,var(--o),#a855f7); box-shadow:0 0 16px var(--o-glow); }
+  #talk.thinking #face { animation:bob .9s ease-in-out infinite; }
+  @keyframes bob { 50% { transform:translateY(-3px) rotate(-4deg); } }
+
+  /* humor: nervosa -> ambar tremendo de leve; raiva -> vermelho, tremor forte, texto grosso */
+  #talk[data-mood="nervosa"] { border-color:#f59e0b; box-shadow:0 0 20px #f59e0b26; }
+  #talk[data-mood="nervosa"] #face { background:linear-gradient(140deg,#f59e0b,#f97316); animation:jitter .5s ease-in-out infinite; }
+  #talk[data-mood="raiva"] { border-color:#ef4444; box-shadow:0 0 28px #ef444440; animation:rage .28s ease-in-out infinite; }
+  #talk[data-mood="raiva"] #face { background:linear-gradient(140deg,#ef4444,#b91c1c); animation:jitter .18s ease-in-out infinite; }
+  #talk[data-mood="raiva"] #bubble { color:#fecaca; font-weight:700; letter-spacing:.01em; }
+  @keyframes jitter { 25%{transform:translate(1px,-1px) rotate(-6deg)} 75%{transform:translate(-1px,1px) rotate(6deg)} }
+  @keyframes rage { 25%{transform:translateX(-2px)} 75%{transform:translateX(2px)} }
+  /* display:block de proposito: como flex, o texto vira item anonimo com min-width:auto
+     (inalcancavel por CSS) e a frase longa empurra o balao pra fora da tela. */
+  #bubble { flex:1; min-width:0; display:block; overflow-wrap:anywhere;
+            font-size:.85rem; line-height:1.35; min-height:2.4em; }
+  #bubble.mut { color:var(--mut); font-style:italic; }
+  .dots i { display:inline-block; width:5px; height:5px; margin-right:3px; border-radius:50%;
+            background:var(--mut); animation:blink 1.2s infinite; }
+  .dots i:nth-child(2){animation-delay:.2s} .dots i:nth-child(3){animation-delay:.4s}
+  @keyframes blink { 0%,60%,100%{opacity:.25;transform:translateY(0)} 30%{opacity:1;transform:translateY(-3px)} }
+
+  /* tabuleiro */
+  #board { --sz:min(27vw,104px); display:grid; gap:8px; position:relative;
+           grid-template-columns:repeat(3,var(--sz)); grid-template-rows:repeat(3,var(--sz)); }
+  .cell {
+    font-size:calc(var(--sz)*.52); font-weight:800; font-family:inherit; color:var(--fg);
+    background:linear-gradient(160deg,var(--panel-2),var(--panel)); border:1px solid var(--line);
+    border-radius:18px; cursor:pointer; padding:0; display:grid; place-items:center;
+    transition:transform .14s cubic-bezier(.34,1.56,.64,1), border-color .14s, box-shadow .14s;
+    -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  }
+  .cell:hover:not(:disabled):not(.filled) { border-color:var(--x); transform:translateY(-2px); }
+  .cell:active:not(:disabled) { transform:scale(.96); }
+  .cell:disabled { cursor:default; }
+  .cell span { display:block; animation:pop .28s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes pop { from { transform:scale(.3) rotate(-14deg); opacity:0; } }
+  .cell.x span { color:var(--x); text-shadow:0 0 22px var(--x-glow); }
+  .cell.o span { color:var(--o); text-shadow:0 0 22px var(--o-glow); }
+  .cell.win { border-color:currentColor; animation:flash 1.1s ease-in-out infinite alternate; }
+  .cell.win.x { color:var(--x); box-shadow:0 0 26px var(--x-glow) inset; }
+  .cell.win.o { color:var(--o); box-shadow:0 0 26px var(--o-glow) inset; }
+  @keyframes flash { to { box-shadow:0 0 42px currentColor inset; } }
+  #board.locked .cell:not(.filled) { opacity:.55; }
+
+  /* rodape */
+  #status { font-weight:700; font-size:.95rem; min-height:1.5em; text-align:center; }
+  #meta { color:var(--mut); font-size:.7rem; font-family:ui-monospace,Consolas,monospace;
+          min-height:1.2em; text-align:center; }
+  #reset { font:inherit; font-weight:700; font-size:.85rem; color:var(--fg); cursor:pointer;
+           background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:.6rem 1.4rem;
+           transition:border-color .15s, transform .1s; -webkit-tap-highlight-color:transparent; }
+  #reset:hover { border-color:var(--o); } #reset:active { transform:scale(.96); }
+
+  @media (prefers-reduced-motion:reduce) { * { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Jogo da Velha</h1>
+    <p class="model">você <b style="color:var(--x)">X</b> · <code>__MODEL__</code> <b style="color:var(--o)">O</b></p>
+  </header>
+
+  <div id="score">
+    <div class="sc me"><b id="s-me">0</b><span>você</span></div>
+    <div class="sc"><b id="s-dr">0</b><span>empates</span></div>
+    <div class="sc ia"><b id="s-ia">0</b><span>IA</span></div>
+  </div>
+
+  <div id="talk">
+    <div id="face">🤖</div>
+    <div id="bubble" class="mut">Senta aí. Vou te dar a primeira jogada de vantagem.</div>
+  </div>
+
+  <div id="board"></div>
+
+  <div id="status">Sua vez.</div>
+  <div id="meta"></div>
+  <button id="reset">Novo jogo</button>
+
+<script type="module">
+const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+const $ = (id) => document.getElementById(id);
+const boardEl = $("board"), statusEl = $("status"), metaEl = $("meta"), bubble = $("bubble"), talk = $("talk");
+
+let board = Array(9).fill(null);
+let locked = false;
+let typer = null;
+const score = { me: 0, ia: 0, dr: 0 };
+
+const cells = Array.from({ length: 9 }, (_, i) => {
+  const b = document.createElement("button");
+  b.className = "cell";
+  b.setAttribute("aria-label", `casa ${i + 1}`);
+  b.addEventListener("click", () => play(i));
+  boardEl.appendChild(b);
+  return b;
+});
+
+const FACE = { calma: "🤖", nervosa: "😰", raiva: "🤬" };
+
+function setMood(mood) {
+  if (mood && mood !== "calma") talk.dataset.mood = mood;
+  else delete talk.dataset.mood;
+  $("face").textContent = FACE[mood] ?? FACE.calma;
+}
+
+/** Efeito de digitacao — quanto mais nervosa, mais rapido ela cospe a frase. */
+function say(text, muted = false) {
+  clearInterval(typer);
+  bubble.classList.toggle("mut", muted);
+  bubble.textContent = "";
+  const speed = talk.dataset.mood === "raiva" ? 9 : talk.dataset.mood === "nervosa" ? 13 : 18;
+  let i = 0;
+  typer = setInterval(() => {
+    bubble.textContent = text.slice(0, ++i);
+    if (i >= text.length) clearInterval(typer);
+  }, speed);
+}
+
+function thinking() {
+  clearInterval(typer);
+  talk.classList.add("thinking");
+  bubble.classList.add("mut");
+  bubble.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>';
+}
+
+function winnerOf(b) {
+  for (const l of LINES) if (b[l[0]] && b[l[0]] === b[l[1]] && b[l[0]] === b[l[2]]) return { p: b[l[0]], line: l };
+  return null;
+}
+
+function draw(line = null) {
+  boardEl.classList.toggle("locked", locked);
+  cells.forEach((c, i) => {
+    const v = board[i];
+    c.innerHTML = v ? `<span>${v}</span>` : "";
+    c.className = "cell" + (v ? ` filled ${v.toLowerCase()}` : "") + (line?.includes(i) ? " win" : "");
+    c.disabled = locked || v !== null;
+  });
+}
+
+async function finish(w) {
+  locked = true;
+  draw(w?.line);
+  if (w?.p === "X") { score.me++; statusEl.textContent = "Você venceu! 🎉"; }
+  else if (w?.p === "O") { score.ia++; statusEl.textContent = "A IA venceu. 🤖"; }
+  else { score.dr++; statusEl.textContent = "Empate."; }
+  $("s-me").textContent = score.me; $("s-ia").textContent = score.ia; $("s-dr").textContent = score.dr;
+
+  if (w?.p === "O") return; // a zoeira da vitoria ja veio junto com a jogada
+  thinking();
+  try {
+    const res = await fetch("/api/endgame", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ board }),
+    });
+    const d = await res.json();
+    talk.classList.remove("thinking");
+    if (res.ok) { setMood(d.mood); say(d.taunt); }
+  } catch { talk.classList.remove("thinking"); }
+}
+
+function over() {
+  const w = winnerOf(board);
+  if (w) { finish(w); return true; }
+  if (board.every(Boolean)) { finish(null); return true; }
+  return false;
+}
+
+async function play(i) {
+  if (locked || board[i]) return;
+  board[i] = "X";
+  locked = true;
+  draw();
+  if (over()) return;
+
+  statusEl.textContent = "A IA está pensando…";
+  metaEl.textContent = "";
+  thinking();
+  try {
+    const res = await fetch("/api/move", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ board }),
+    });
+    const data = await res.json();
+    talk.classList.remove("thinking");
+    if (!res.ok) throw new Error(data.error ?? res.statusText);
+    board = data.board;
+    locked = false;
+    draw();
+    setMood(data.mood);
+    say(data.taunt ?? "…");
+    metaEl.textContent = `casa ${data.move} · ${data.ms} ms · ${data.source}/${data.tauntSource} · ${data.mood}` +
+      (data.error ? ` · ${data.error}` : "");
+    if (!over()) statusEl.textContent = "Sua vez.";
+  } catch (err) {
+    talk.classList.remove("thinking");
+    locked = false;
+    statusEl.textContent = "Erro ao falar com o modelo.";
+    say(String(err.message ?? err), true);
+    draw();
+  }
+}
+
+$("reset").addEventListener("click", () => {
+  board = Array(9).fill(null);
+  locked = false;
+  statusEl.textContent = "Sua vez.";
+  metaEl.textContent = "";
+  setMood("calma");
+  say("Nova partida. Mesmo resultado, provavelmente.", true);
+  draw();
+});
+
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+.git
+node_modules
+scripts
+server.log
+server.err
+README.md
