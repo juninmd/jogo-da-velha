@@ -1,10 +1,10 @@
 import { type Board, type Mood, legalMoves, moodOf, render } from "./game";
 
 /**
- * Dois provedores: `ollama` (dev local) e `openai` (LiteLLM do cluster, API
- * compativel com OpenAI). O que muda entre eles esta so em `chat()`.
+ * Dois provedores: `openai` (padrao, LiteLLM do cluster, API compativel com
+ * OpenAI) e `ollama` (so dev local, opt-in via AI_PROVIDER=ollama). O que muda entre eles esta so em `chat()`.
  */
-const PROVIDER = (process.env.AI_PROVIDER ?? "ollama") as "ollama" | "openai";
+const PROVIDER = (process.env.AI_PROVIDER ?? "openai") as "ollama" | "openai";
 
 // OLLAMA_HOST costuma vir sem esquema (ex.: "127.0.0.1:11434") — fetch() rejeita assim.
 const RAW_HOST = process.env.OLLAMA_HOST?.trim() || "127.0.0.1:11434";
@@ -14,7 +14,7 @@ const OPENAI_BASE = (process.env.OPENAI_BASE_URL ?? "http://litellm.ai.svc.clust
 const OPENAI_KEY = process.env.OPENAI_API_KEY ?? "";
 const MODEL =
   PROVIDER === "openai"
-    ? (process.env.OPENAI_MODEL ?? "cloud/llama-8b")
+    ? (process.env.OPENAI_MODEL ?? "cloud/auto")
     : (process.env.OLLAMA_MODEL ?? "qwen-fast:latest");
 
 type ChatOpts = { temperature: number; maxTokens: number; timeoutMs: number };
