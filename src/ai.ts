@@ -136,7 +136,9 @@ function parseReply(text: string, free: number[]): { move: number; taunt: string
     } catch {}
   }
   // JSON torto: ainda tenta achar um indice livre solto no texto.
-  candidates.push(...(text.match(/\d/g) ?? []).map(Number));
+  // Digitos dentro do JSON (ex.: "2 bits" na zoeira) nao sao jogadas.
+  const loose = text.replace(/\{[^{}]*\}/g, " ");
+  candidates.push(...(loose.match(/\d/g) ?? []).map(Number));
   const move = candidates.find((n) => free.includes(n));
   return move === undefined ? null : { move, taunt };
 }
