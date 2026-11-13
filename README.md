@@ -1,5 +1,9 @@
 # Jogo da Velha contra uma LLM
 
+<p align="center">
+  <img src="docs/readme/hero.png" alt="Banner ilustrativo do Jogo da Velha (mockup com dados fictícios)" width="100%">
+</p>
+
 Jogo da velha em que você é **X**, a máquina é **O** e cada jogada vem com uma provocação gerada pelo modelo. Dois provedores atrás da mesma interface: Ollama para rodar local e qualquer gateway compatível com a API OpenAI (aqui, LiteLLM) para rodar no cluster.
 
 [![Validate](https://github.com/juninmd/jogo-da-velha/actions/workflows/validate.yml/badge.svg?branch=master)](https://github.com/juninmd/jogo-da-velha/actions/workflows/validate.yml)
@@ -151,6 +155,18 @@ bun run smoke
 ```
 
 O script (`scripts/smoke.ts`) valida a lógica de humor sem modelo, joga uma partida inteira como `X`, confere se cada jogada de `O` é legal, se a zoeira existe, se o humor devolvido bate com o cálculo local e se `/api/endgame` responde `raiva` quando a IA perde. Também exige `400` para um tabuleiro com turno inválido. Ele usa `BASE` (padrão `http://localhost:3737`).
+
+## Imagens
+
+> [!NOTE]
+> **Mockups ilustrativos.** As telas abaixo foram geradas em HTML com dados fictícios (Playwright) e não são capturas de uma instalação real.
+
+<p align="center">
+  <img src="docs/readme/match.png" alt="Partida em andamento — mockup ilustrativo com dados fictícios" width="100%">
+  <br>
+  <sub>Partida em andamento — dados fictícios.</sub>
+</p>
+
 
 ## Limitações
 
