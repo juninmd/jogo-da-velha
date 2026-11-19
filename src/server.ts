@@ -31,6 +31,8 @@ function tauntKind(before: Board, after: Board, move: number): TauntKind {
 
 const server = Bun.serve({
   port: PORT,
+  // O corpo valido e um array de 9 casas; o padrao do Bun aceita 128 MB.
+  maxRequestBodySize: 4096,
   async fetch(req) {
     const url = new URL(req.url);
 

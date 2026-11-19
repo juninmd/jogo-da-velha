@@ -5,6 +5,10 @@
   "scripts": {
     "start": "bun run src/server.ts",
     "dev": "bun --watch src/server.ts",
+    "test": "bun test",
     "smoke": "bun run scripts/smoke.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4"
   }
 }
