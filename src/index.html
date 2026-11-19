@@ -123,7 +123,7 @@
 
   <div id="board"></div>
 
-  <div id="status">Sua vez.</div>
+  <div id="status" role="status" aria-live="polite">Sua vez.</div>
   <div id="meta"></div>
   <button id="reset">Novo jogo</button>
 
@@ -135,6 +135,8 @@ const boardEl = $("board"), statusEl = $("status"), metaEl = $("meta"), bubble =
 let board = Array(9).fill(null);
 let locked = false;
 let typer = null;
+// Bumped on reset so a reply that was in flight for the old game is ignored
+let game = 0;
 const score = { me: 0, ia: 0, dr: 0 };
 
 const cells = Array.from({ length: 9 }, (_, i) => {
@@ -186,6 +188,7 @@ function draw(line = null) {
     c.innerHTML = v ? `<span>${v}</span>` : "";
     c.className = "cell" + (v ? ` filled ${v.toLowerCase()}` : "") + (line?.includes(i) ? " win" : "");
     c.disabled = locked || v !== null;
+    c.setAttribute("aria-label", `casa ${i + 1}${v ? `, ${v}` : ""}`);
   });
 }
 
@@ -199,15 +202,17 @@ async function finish(w) {
 
   if (w?.p === "O") return; // a zoeira da vitoria ja veio junto com a jogada
   thinking();
+  const mine = game;
   try {
     const res = await fetch("/api/endgame", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ board }),
     });
     const d = await res.json();
+    if (mine !== game) return;
     talk.classList.remove("thinking");
     if (res.ok) { setMood(d.mood); say(d.taunt); }
-  } catch { talk.classList.remove("thinking"); }
+  } catch { if (mine === game) talk.classList.remove("thinking"); }
 }
 
 function over() {
@@ -227,12 +232,14 @@ async function play(i) {
   statusEl.textContent = "A IA está pensando…";
   metaEl.textContent = "";
   thinking();
+  const mine = game;
   try {
     const res = await fetch("/api/move", {
       method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ board }),
     });
     const data = await res.json();
+    if (mine !== game) return;
     talk.classList.remove("thinking");
     if (!res.ok) throw new Error(data.error ?? res.statusText);
     board = data.board;
@@ -240,10 +247,11 @@ async function play(i) {
     draw();
     setMood(data.mood);
     say(data.taunt ?? "…");
-    metaEl.textContent = `casa ${data.move} · ${data.ms} ms · ${data.source}/${data.tauntSource} · ${data.mood}` +
+    metaEl.textContent = `casa ${data.move + 1} · ${data.ms} ms · ${data.source}/${data.tauntSource} · ${data.mood}` +
       (data.error ? ` · ${data.error}` : "");
     if (!over()) statusEl.textContent = "Sua vez.";
   } catch (err) {
+    if (mine !== game) return;
     talk.classList.remove("thinking");
     locked = false;
     statusEl.textContent = "Erro ao falar com o modelo.";
@@ -253,8 +261,10 @@ async function play(i) {
 }
 
 $("reset").addEventListener("click", () => {
+  game++;
   board = Array(9).fill(null);
   locked = false;
+  talk.classList.remove("thinking");
   statusEl.textContent = "Sua vez.";
   metaEl.textContent = "";
   setMood("calma");
