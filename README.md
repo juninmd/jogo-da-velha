@@ -146,6 +146,12 @@ A imagem é `oven/bun:1`, roda como usuário `bun`, expõe `3000` e não instala
 
 Não há manifests de Kubernetes neste repositório. O processo só precisa das variáveis acima; num cluster, o caminho normal é `AI_PROVIDER=openai` com `OPENAI_BASE_URL` apontando para o serviço interno do LiteLLM e `OPENAI_API_KEY` vindo de um Secret. O chart e o deploy ficam fora deste repositório.
 
+## Testes
+
+```bash
+bun test      # lógica pura: regras, humor, fallback e parser da resposta do modelo
+```
+
 ## Smoke test
 
 Com o servidor no ar:
@@ -175,6 +181,6 @@ O script (`scripts/smoke.ts`) valida a lógica de humor sem modelo, joga uma par
 - **A qualidade depende do modelo.** Modelos de raciocínio podem devolver conteúdo vazio; modelos que ignoram `response_format` quebram o parser e caem no fallback. A lista de modelos que não funcionam está acima.
 - **O fallback é tático, não imbatível.** Ele vence, bloqueia, depois prefere centro e cantos; não é um solver perfeito.
 - **A zoeira pode repetir.** O bypass de cache depende do gateway honrar `cache: {"no-cache": true}`.
-- **Não há suíte de testes unitários nem script `test`.** A verificação automatizada do repositório é o smoke test HTTP mais os workflows de validação e build da imagem.
+- **Testes unitários só cobrem a lógica pura.** `bun test` roda `test/game.test.ts` (regras, humor, fallback e o parser da resposta do modelo); o fluxo HTTP continua coberto só pelo smoke test e pelos workflows de validação e build da imagem.
 - **Sem arquivo de licença.** Não há `LICENSE` no repositório.
 - O HTML, o CSS e o JavaScript do cliente ficam todos em `src/index.html`; não há build separado.

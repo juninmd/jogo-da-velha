@@ -122,7 +122,7 @@ function cleanTaunt(v: unknown): string | null {
   return `${(sp > 60 ? cut.slice(0, sp) : cut).replace(/[\s,;:]+$/, "")}…`;
 }
 
-function parseReply(text: string, free: number[]): { move: number; taunt: string | null } | null {
+export function parseReply(text: string, free: number[]): { move: number; taunt: string | null } | null {
   const candidates: number[] = [];
   let taunt: string | null = null;
   const json = text.match(/\{[^{}]*\}/g) ?? [];
@@ -138,7 +138,8 @@ function parseReply(text: string, free: number[]): { move: number; taunt: string
   // JSON torto: ainda tenta achar um indice livre solto no texto.
   // Digitos dentro do JSON (ex.: "2 bits" na zoeira) nao sao jogadas.
   const loose = text.replace(/\{[^{}]*\}/g, " ");
-  candidates.push(...(loose.match(/\d/g) ?? []).map(Number));
+  // So digito isolado: "12" nao vira as jogadas 1 e 2.
+  candidates.push(...(loose.match(/(?<!\d)\d(?!\d)/g) ?? []).map(Number));
   const move = candidates.find((n) => free.includes(n));
   return move === undefined ? null : { move, taunt };
 }
