@@ -212,7 +212,12 @@ async function finish(w) {
     if (mine !== game) return;
     talk.classList.remove("thinking");
     if (res.ok) { setMood(d.mood); say(d.taunt); }
-  } catch { if (mine === game) talk.classList.remove("thinking"); }
+    else say("Sem comentário desta vez.", true);
+  } catch {
+    if (mine !== game) return;
+    talk.classList.remove("thinking");
+    say("Sem comentário desta vez.", true); // sem isso os pontinhos de "pensando" ficam na tela para sempre
+  }
 }
 
 function over() {
