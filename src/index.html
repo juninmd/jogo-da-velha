@@ -79,9 +79,9 @@
     transition:transform .14s cubic-bezier(.34,1.56,.64,1), border-color .14s, box-shadow .14s;
     -webkit-tap-highlight-color:transparent; touch-action:manipulation;
   }
-  .cell:hover:not(:disabled):not(.filled) { border-color:var(--x); transform:translateY(-2px); }
-  .cell:active:not(:disabled) { transform:scale(.96); }
-  .cell:disabled { cursor:default; }
+  .cell:hover:not([aria-disabled="true"]):not(.filled) { border-color:var(--x); transform:translateY(-2px); }
+  .cell:active:not([aria-disabled="true"]) { transform:scale(.96); }
+  .cell[aria-disabled="true"] { cursor:default; }
   .cell span { display:block; animation:pop .28s cubic-bezier(.34,1.56,.64,1); }
   @keyframes pop { from { transform:scale(.3) rotate(-14deg); opacity:0; } }
   .cell.x span { color:var(--x); text-shadow:0 0 22px var(--x-glow); }
@@ -187,7 +187,8 @@ function draw(line = null) {
     const v = board[i];
     c.innerHTML = v ? `<span>${v}</span>` : "";
     c.className = "cell" + (v ? ` filled ${v.toLowerCase()}` : "") + (line?.includes(i) ? " win" : "");
-    c.disabled = locked || v !== null;
+    // aria-disabled, nao disabled: um botao desabilitado perde o foco e quem joga pelo teclado volta ao inicio da pagina
+    c.setAttribute("aria-disabled", String(locked || v !== null));
     c.setAttribute("aria-label", `casa ${i + 1}${v ? `, ${v}` : ""}`);
   });
 }
