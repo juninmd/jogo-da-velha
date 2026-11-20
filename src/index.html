@@ -253,8 +253,9 @@ async function play(i) {
   } catch (err) {
     if (mine !== game) return;
     talk.classList.remove("thinking");
+    board[i] = null; // a IA nao respondeu: desfaz a jogada, senao o X joga duas vezes e o servidor recusa tudo
     locked = false;
-    statusEl.textContent = "Erro ao falar com o modelo.";
+    statusEl.textContent = "Erro ao falar com o modelo. Jogue de novo.";
     say(String(err.message ?? err), true);
     draw();
   }
