@@ -113,11 +113,13 @@ const MAX_TAUNT = 120;
 function cleanTaunt(v: unknown): string | null {
   if (typeof v !== "string") return null;
   const t = v.replace(/\s+/g, " ").trim();
-  if (t.length < 3) return null;
-  if (t.length <= MAX_TAUNT) return t;
+  // Conta por code point: slice por UTF-16 partia emoji e deixava surrogate solto (vira U+FFFD).
+  const chars = Array.from(t);
+  if (chars.length < 3) return null;
+  if (chars.length <= MAX_TAUNT) return t;
   // O modelo ignora o limite de caracteres; cortar no meio da palavra fica
   // pior que cortar na ultima fronteira de palavra.
-  const cut = t.slice(0, MAX_TAUNT);
+  const cut = chars.slice(0, MAX_TAUNT).join("");
   const sp = cut.lastIndexOf(" ");
   return `${(sp > 60 ? cut.slice(0, sp) : cut).replace(/[\s,;:]+$/, "")}…`;
 }
