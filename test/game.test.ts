@@ -68,3 +68,20 @@ describe("parseReply", () => {
     expect(parseReply("jogue na casa 8", free)?.move).toBe(8);
   });
 });
+
+describe("zoeira longa", () => {
+  const loneSurrogate = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+  const tauntOf = (zoeira: string) => parseReply(JSON.stringify({ move: 4, zoeira }), [4])?.taunt ?? "";
+
+  test("cortar no limite nao parte um emoji ao meio", () => {
+    const t = tauntOf(`${"a".repeat(119)}😀xyz`);
+    expect(loneSurrogate.test(t)).toBe(false);
+    expect(t.endsWith("…")).toBe(true);
+  });
+
+  test("so emoji: no maximo 120 caracteres visiveis mais as reticencias", () => {
+    const t = tauntOf("😀".repeat(200));
+    expect(loneSurrogate.test(t)).toBe(false);
+    expect([...t].length).toBeLessThanOrEqual(121);
+  });
+});
